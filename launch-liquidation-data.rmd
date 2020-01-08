@@ -1,0 +1,56 @@
+---
+title: "Share_Class"
+author: "Adrian D. Garcia"
+date: "January 2020"
+output:
+   html_document:
+     keep_md: TRUE
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(lubridate)
+library(DT)
+
+setwd("C:/Users/agarcia/Documents/Data")
+
+```
+
+```{r data, message=FALSE}
+
+INCEPTION <- read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
+
+PATTERN <- c("(\\s)?([:alnum:]+)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$")
+
+Data <- INCEPTION %>%  
+  select(Name) %>% 
+  mutate(
+    Match = str_detect(Name, PATTERN),
+    EXTRACT = str_extract(Name, PATTERN)
+    )
+```
+
+```{r data_show, echo=FALSE}
+datatable(Data, options = list(autoWidth = TRUE, scrollX = TRUE))
+```
+
+```{r summary, message=FALSE}
+SummaryTable <- Data %>% group_by(EXTRACT) %>% 
+  summarise(cases = n()) %>% 
+  arrange(-cases)
+```
+
+```{r summary_show, echo=FALSE}
+datatable(SummaryTable)
+```
+
+```{r add, message=FALSE}
+MODIFIED <- INCEPTION %>%  
+  mutate(
+    Match = str_detect(Name, PATTERN),
+    EXTRACT = str_extract(Name, PATTERN)
+    ) %>% 
+  select(Name, Match, EXTRACT, 2:19)
+         
+```
