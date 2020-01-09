@@ -12,9 +12,6 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 library(DT)
-
-setwd("C:/Users/agarcia/Documents/Data")
-
 ```
 
 ```{r data, message=FALSE}
