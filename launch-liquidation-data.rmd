@@ -23,11 +23,15 @@ INCEPTION <- read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet 
 
 PATTERN <- c("(\\s)?([:alnum:]+)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$")
 
+CUT <- c("([:punct:]\\X\\X[:punct:])|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))")
+
+
 Data <- INCEPTION %>%  
   select(Name) %>% 
   mutate(
     Match = str_detect(Name, PATTERN),
-    EXTRACT = str_extract(Name, PATTERN)
+    EXTRACT = str_extract(Name, PATTERN),
+    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
     )
 ```
 
@@ -36,21 +40,32 @@ datatable(Data, options = list(autoWidth = TRUE, scrollX = TRUE))
 ```
 
 ```{r summary, message=FALSE}
-SummaryTable <- Data %>% group_by(EXTRACT) %>% 
+ChangesSummaryTable <- Data %>%
+  group_by(EXTRACT) %>% 
+  summarise(cases = n()) %>%
+  mutate(
+    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
+  ) %>% group_by(New) %>% 
+  mutate(replacements=n(),
+         newcases = sum(cases)) %>% 
+  arrange(-newcases)
+
+SummaryTable <- Data %>%
+  group_by(New) %>% 
   summarise(cases = n()) %>% 
   arrange(-cases)
 ```
 
 ```{r summary_show, echo=FALSE}
-datatable(SummaryTable)
+datatable(ChangesSummaryTable)
 ```
 
 ```{r add, message=FALSE}
 MODIFIED <- INCEPTION %>%  
   mutate(
     Match = str_detect(Name, PATTERN),
-    EXTRACT = str_extract(Name, PATTERN)
-    ) %>% 
-  select(Name, Match, EXTRACT, 2:19)
+    EXTRACT = str_extract(Name, PATTERN),
+    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))    ) %>% 
+  select(Name, Match, EXTRACT, New, 2:19)
          
 ```
