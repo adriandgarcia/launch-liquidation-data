@@ -46,7 +46,7 @@ ChangesSummaryTable <- Data %>%
   mutate(
     New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
   ) %>% group_by(New) %>% 
-  mutate(replacements=n(),
+  mutate(replacements=n()-1,
          newcases = sum(cases)) %>% 
   arrange(-newcases)
 
@@ -56,7 +56,7 @@ SummaryTable <- Data %>%
   arrange(-cases)
 ```
 
-```{r summary_show, echo=FALSE}
+```{r changes_summary_show, echo=FALSE}
 datatable(ChangesSummaryTable)
 ```
 
@@ -68,4 +68,8 @@ MODIFIED <- INCEPTION %>%
     New=str_trim(str_replace_all(EXTRACT,  CUT, ""))    ) %>% 
   select(Name, Match, EXTRACT, New, 2:19)
          
+```
+
+```{r summary_show, echo=FALSE}
+datatable(SummaryTable)
 ```
