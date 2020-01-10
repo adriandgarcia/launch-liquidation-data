@@ -21,10 +21,18 @@ library(DT)
 
 INCEPTION <- read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
 
-PATTERN <- c("(\\s)?([:alnum:]+)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$")
+PATTERN <- c("(\\s)?([:alnum:]+)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:alpha:]\\{..\\} LW)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$")
 
-CUT <- c("([:punct:]\\X\\X[:punct:])|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))")
+CUT <- c("([:punct:]\\X\\X[:punct:])|([:punct:]\\X\\X$)|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))")
 
+CHANGE <- c("^Adm(in$)?(in[:alpha:]+)?$" = "Admin",
+            "[:alnum:]+R6$" = "R6",
+            "(?!AA)[:alpha:]+A$" = "A",
+            "(?![FIVS]+I$|([:alpha:]+)?II$)([:alpha:]+)?I$" = "I",
+            "([:alpha:]+)?C$" = "C",
+            "([:alpha:]+)?Inst(l$)?(itutional$)?$" = "Instl",
+            "([:alpha:]+)?(\\:[:alpha:]+)?Y$" = "Y",
+            "([:alpha:]+)?(\\:[:alpha:]+)?R$(?<!(SDR$))" = "R")
 
 Data <- INCEPTION %>%  
   select(Name) %>% 
@@ -32,6 +40,9 @@ Data <- INCEPTION %>%
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
     New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
+  ) %>% 
+  mutate(
+    Revision = str_replace_all(New, CHANGE)
     )
 ```
 
@@ -47,11 +58,16 @@ ChangesSummaryTable <- Data %>%
     New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
   ) %>% group_by(New) %>% 
   mutate(replacements=n()-1,
-         newcases = sum(cases)) %>% 
-  arrange(-newcases)
+         newcases = sum(cases)) %>%
+  mutate(Revision = str_replace_all(New, CHANGE)
+  )%>% 
+  group_by(Revision) %>% 
+  mutate(replacements1=(n()-replacements)-1,
+         newercases = sum(cases)
+         )
 
 SummaryTable <- Data %>%
-  group_by(New) %>% 
+  group_by(Revision) %>% 
   summarise(cases = n()) %>% 
   arrange(-cases)
 ```
