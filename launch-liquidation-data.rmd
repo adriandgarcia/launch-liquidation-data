@@ -19,31 +19,57 @@ library(DT)
 
 ```{r data, message=FALSE}
 
-INCEPTION <- read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
+INCEPTION <-
+  read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
 
-PATTERN <- c("(\\s)?([:alnum:]+)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:alpha:]\\{..\\} LW)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$")
+PATTERN <-
+  c(
+    "(\\s)?([:alnum:]+)?([:alnum:][:punct:][:alnum:] LW)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:alpha:]\\{..\\} LW)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$"
+  )
 
-CUT <- c("([:punct:]\\X\\X[:punct:])|([:punct:]\\X\\X$)|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))")
+CUT <-
+  c(
+    "([:punct:]\\X\\X[:punct:])|([:punct:]\\X\\X$)|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))"
+  )
 
-CHANGE <- c("^Adm(in$)?(in[:alpha:]+)?$" = "Admin",
-            "[:alnum:]+R6$" = "R6",
-            "(?!AA)[:alpha:]+A$" = "A",
-            "(?![FIVS]+I$|([:alpha:]+)?II$)([:alpha:]+)?I$" = "I",
-            "([:alpha:]+)?C$" = "C",
-            "([:alpha:]+)?Inst(l$)?(itutional$)?$" = "Instl",
-            "([:alpha:]+)?(\\:[:alpha:]+)?Y$" = "Y",
-            "([:alpha:]+)?(\\:[:alpha:]+)?R$(?<!(SDR$))" = "R")
+CHANGE <- c(
+  "^Adm(in$)?(in[:alpha:]+)?$" = "Admin",
+  "[:alnum:]+R6$" = "R6",
+  "(?!AA)[:alpha:]+A$" = "A",
+  "A\\{m" = "A",
+  "([:alpha:]+)([:punct:])?([:alpha:]+)?A$" = "A",
+  "(?![FIVS]+I$|([:alpha:]+)?II$)([:alpha:]+)?I$(?<!(IR$))" = "I",
+  "([:alpha:]+)([:punct:])?([:alpha:]+)?I$(?<!(F/I$))" = "I",
+  "([:alpha:]+)([:punct:])?([:alpha:]+)?C$" = "C",
+  "PlusC([:digit:]+)$" = "C",
+  "([:alpha:]+)?([:Punct:][:alpha:]+)?Inst(l$)?(itutional$)?$" = "Instl",
+  "([:alnum:]+)?Ins$" = "Instl",
+  "([:alnum:]+)?Insl$" = "Instl",
+  "[:alnum:]+Ist$" = "Instl",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?Y$" = "Y",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?R$(?<!(SDR$)|(IR$))" = "R",
+  "[:alnum:]+R5$" = "R5",
+  "([:alpha:]+)?([:Punct:][:alpha:]+)?In([vest]+)?(ment$)?$" = "Investor",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?N$" = "N",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?T$" = "T",
+  "[:alnum:]+R4$" = "R4",
+  "([:alpha:]+)?([:Punct:][:alpha:]+)?Adv(iser$)?(isory$)?$" = "Advisor",
+  "([:alpha:]+)?([:Punct:][:alpha:]+)?ADV$" = "Advisor",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?K$" = "K",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?F$" = "F",
+  "[:alnum:]+R3$" = "R3",
+  "[:alnum:]+F3$" = "F3",
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?IS$" = "IS"
+)
 
-Data <- INCEPTION %>%  
-  select(Name) %>% 
+Data <- INCEPTION %>%
+  select(Name) %>%
   mutate(
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
-    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
-  ) %>% 
-  mutate(
-    Revision = str_replace_all(New, CHANGE)
-    )
+    New = str_trim(str_replace_all(EXTRACT,  CUT, ""))
+  ) %>%
+  mutate(Revision = str_replace_all(New, CHANGE))
 ```
 
 ```{r data_show, echo=FALSE}
@@ -52,23 +78,19 @@ datatable(Data, options = list(autoWidth = TRUE, scrollX = TRUE))
 
 ```{r summary, message=FALSE}
 ChangesSummaryTable <- Data %>%
-  group_by(EXTRACT) %>% 
+  group_by(EXTRACT) %>%
   summarise(cases = n()) %>%
-  mutate(
-    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))
-  ) %>% group_by(New) %>% 
-  mutate(replacements=n()-1,
+  mutate(New = str_trim(str_replace_all(EXTRACT,  CUT, ""))) %>% group_by(New) %>%
+  mutate(replacements = n() - 1,
          newcases = sum(cases)) %>%
-  mutate(Revision = str_replace_all(New, CHANGE)
-  )%>% 
-  group_by(Revision) %>% 
-  mutate(replacements1=(n()-replacements)-1,
-         newercases = sum(cases)
-         )
+  mutate(Revision = str_replace_all(New, CHANGE)) %>%
+  group_by(Revision) %>%
+  mutate(replacements1 = (n() - replacements) - 1,
+         newercases = sum(cases))
 
 SummaryTable <- Data %>%
-  group_by(Revision) %>% 
-  summarise(cases = n()) %>% 
+  group_by(Revision) %>%
+  summarise(cases = n()) %>%
   arrange(-cases)
 ```
 
@@ -77,13 +99,15 @@ datatable(ChangesSummaryTable)
 ```
 
 ```{r add, message=FALSE}
-MODIFIED <- INCEPTION %>%  
+MODIFIED <- INCEPTION %>%
   mutate(
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
-    New=str_trim(str_replace_all(EXTRACT,  CUT, ""))    ) %>% 
-  select(Name, Match, EXTRACT, New, 2:19)
-         
+    New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
+    Revision = str_replace_all(New, CHANGE)
+  ) %>%
+  select(Name, Match, EXTRACT, New, Revision, 2:19)
+
 ```
 
 ```{r summary_show, echo=FALSE}
