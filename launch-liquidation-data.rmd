@@ -17,7 +17,7 @@ library(lubridate)
 library(DT)
 ```
 
-```{r data, message=FALSE}
+```{r INC_data, message=FALSE}
 
 INCEPTION <-
   read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
@@ -49,7 +49,7 @@ CHANGE <- c(
   "([:alpha:]+)?([:punct:])?([:alpha:]+)?Y$" = "Y",
   "([:alpha:]+)?([:punct:])?([:alpha:]+)?R$(?<!(SDR$)|(IR$))" = "R",
   "[:alnum:]+R5$" = "R5",
-  "([:alpha:]+)?([:Punct:][:alpha:]+)?In([vest]+)?(ment$)?$" = "Investor",
+  "([:alpha:]+)?([:Punct:][:alpha:]+)?In([vest]+)?(ment$)?$(?<!(Int$))" = "Investor",
   "([:alpha:]+)?([:punct:])?([:alpha:]+)?N$" = "N",
   "([:alpha:]+)?([:punct:])?([:alpha:]+)?T$" = "T",
   "[:alnum:]+R4$" = "R4",
@@ -59,25 +59,27 @@ CHANGE <- c(
   "([:alpha:]+)?([:punct:])?([:alpha:]+)?F$" = "F",
   "[:alnum:]+R3$" = "R3",
   "[:alnum:]+F3$" = "F3",
-  "([:alpha:]+)?([:punct:])?([:alpha:]+)?IS$" = "IS"
+  "([:alpha:]+)?([:punct:])?([:alpha:]+)?IS$" = "IS",
+  "^I$" = "Instl",
+  "Retire(ment)?$" = "R"
 )
 
-Data <- INCEPTION %>%
+INC_Data <- INCEPTION %>%
   select(Name) %>%
   mutate(
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
-    New = str_trim(str_replace_all(EXTRACT,  CUT, ""))
-  ) %>%
-  mutate(Revision = str_replace_all(New, CHANGE))
+    New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
+    Revision = str_replace_all(New, CHANGE)
+    )
 ```
 
-```{r data_show, echo=FALSE}
-datatable(Data, options = list(autoWidth = TRUE, scrollX = TRUE))
+```{r INC_data_show, echo=FALSE}
+datatable(INC_Data, options = list(autoWidth = TRUE, scrollX = TRUE))
 ```
 
-```{r summary, message=FALSE}
-ChangesSummaryTable <- Data %>%
+```{r INC_summary, message=FALSE}
+INC_Changes <- INC_Data %>%
   group_by(EXTRACT) %>%
   summarise(cases = n()) %>%
   mutate(New = str_trim(str_replace_all(EXTRACT,  CUT, ""))) %>% group_by(New) %>%
@@ -88,28 +90,80 @@ ChangesSummaryTable <- Data %>%
   mutate(replacements1 = (n() - replacements) - 1,
          newercases = sum(cases))
 
-SummaryTable <- Data %>%
+INC_Summary <- INC_Data %>%
   group_by(Revision) %>%
   summarise(cases = n()) %>%
   arrange(-cases)
 ```
 
-```{r changes_summary_show, echo=FALSE}
-datatable(ChangesSummaryTable)
+```{r INC_changes_summary_show, echo=FALSE}
+datatable(INC_Changes)
 ```
 
-```{r add, message=FALSE}
-MODIFIED <- INCEPTION %>%
+```{r INC_add, message=FALSE}
+INC_MODIFIED <- INCEPTION %>%
+  mutate(
+    Match = str_detect(Name, PATTERN),
+    EXTRACT = str_extract(Name, PATTERN),
+    New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
+    Revision = str_replace_all(New, CHANGE),
+    `Inception Year` = year(`Inception Date`),
+    `Inception Month` = month(`Inception Date`)
+  ) %>%
+  select(Name, Match, EXTRACT, New, Revision, 2:3, `Inception Month`, `Inception Year`, 4:19)
+
+write.csv(INC_MODIFIED, "Launches_Data.csv")
+
+```
+
+```{r INC_summary_show, echo=FALSE}
+datatable(INC_Summary)
+```
+
+```{r LIQUIDATION}
+LIQUIDATION <-
+  read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 2, na = "")
+
+LIQ_Data <- LIQUIDATION %>%
+  select(Name) %>%
   mutate(
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
     New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
     Revision = str_replace_all(New, CHANGE)
-  ) %>%
-  select(Name, Match, EXTRACT, New, Revision, 2:19)
-
+    )
 ```
 
-```{r summary_show, echo=FALSE}
-datatable(SummaryTable)
+```{r LIQ_summary, message=FALSE}
+LIQ_Changes <- LIQ_Data %>%
+  group_by(EXTRACT) %>%
+  summarise(cases = n()) %>%
+  mutate(New = str_trim(str_replace_all(EXTRACT,  CUT, ""))) %>% group_by(New) %>%
+  mutate(replacements = n() - 1,
+         newcases = sum(cases)) %>%
+  mutate(Revision = str_replace_all(New, CHANGE)) %>%
+  group_by(Revision) %>%
+  mutate(replacements1 = (n() - replacements) - 1,
+         newercases = sum(cases))
+
+LIQ_Summary <- LIQ_Data %>%
+  group_by(Revision) %>%
+  summarise(cases = n()) %>%
+  arrange(-cases)
+```
+
+```{r LIQ_add, message=FALSE}
+LIQ_MODIFIED <- LIQUIDATION %>%
+  mutate(
+    Match = str_detect(Name, PATTERN),
+    EXTRACT = str_extract(Name, PATTERN),
+    New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
+    Revision = str_replace_all(New, CHANGE),
+    `Obsolete Year` = year(`Obsolete Date`),
+    `Obsolete Month` = month(`Obsolete Date`)
+  ) %>%
+  select(Name, Match, EXTRACT, New, Revision, 2:3, `Obsolete Month`, `Obsolete Year`, 4:25)
+
+write.csv(LIQ_MODIFIED, "Liquidations_Data.csv")
+
 ```
