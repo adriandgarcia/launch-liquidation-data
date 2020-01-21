@@ -167,3 +167,23 @@ LIQ_MODIFIED <- LIQUIDATION %>%
 write.csv(LIQ_MODIFIED, "Liquidations_Data.csv")
 
 ```
+
+```{r explore, message=FALSE}
+Merged_in_2019 <- inner_join(INC_MODIFIED,LIQ_MODIFIED) %>% 
+  filter(., `Obsolete Type` == "Merged") %>% 
+  mutate(Same_Year =
+           if_else(`Inception Year` == `Obsolete Year`, 1, 0) 
+         ) %>% 
+  filter(Same_Year == 1 & `Inception Year` == 2019)
+
+Disolved <- inner_join(INC_MODIFIED,LIQ_MODIFIED) %>% 
+  mutate(., Same_Year =
+           if_else(`Inception Year` == `Obsolete Year`, 1, 0)
+  )
+
+Launches_Caveat <- left_join(INC_MODIFIED, Disolved)
+Liquidations_Caveat <- left_join(LIQ_MODIFIED, Disolved)
+
+
+```
+
