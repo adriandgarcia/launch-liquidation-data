@@ -17,20 +17,29 @@ library(lubridate)
 library(DT)
 ```
 
+The below pulls in data showing mutual fund share classes that launched from 2015 onward. The data comes from Morningstar Direct and was pulled by E.L. on Jan. 22, 2020.
+
+
 ```{r INC_data, message=FALSE}
 
 INCEPTION <-
-  read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 1, na = "")
+  read_excel(path = "updated-data-for-adrian.xlsx", sheet = 2, na = "")
+
+#The data from Morningstar is dirty. This pattern pulls the last letters/digits in the mutual fund name to identify the share class.
 
 PATTERN <-
   c(
     "(\\s)?([:alnum:]+)?([:alnum:][:punct:][:alnum:] LW)?( Load Waived)?( LW)?([:punct:]+)?([:alnum:]+)?(-[:alnum:])?(™)?([:alpha:]\\{..\\} LW)?([:punct:]..[:punct:])?(\\s)?([:punct:][:alpha:]+[:punct:])?$"
   )
 
+#The data from Morningstar is dirty. This pattern refines the pattern above to identify the share class.
+
 CUT <-
   c(
     "([:punct:]\\X\\X[:punct:])|([:punct:]\\X\\X$)|(-)|(\\sLW)|(\\sLoad\\sWaived)|(\\([:alpha:]+\\))"
   )
+
+#The data from Morningstar is dirty. This pattern makes manual changes to share classification for when the patterns above failed.
 
 CHANGE <- c(
   "^Adm(in$)?(in[:alpha:]+)?$" = "Admin",
@@ -64,6 +73,10 @@ CHANGE <- c(
   "Retire(ment)?$" = "R"
 )
 
+
+#Using the above patterns we can clean the share class information
+#Name -> Extract -> New -> Revision
+
 INC_Data <- INCEPTION %>%
   select(Name) %>%
   mutate(
@@ -78,7 +91,11 @@ INC_Data <- INCEPTION %>%
 datatable(INC_Data, options = list(autoWidth = TRUE, scrollX = TRUE))
 ```
 
+These tables summarise information about the share classes were identified and how many exist in the data.
+
 ```{r INC_summary, message=FALSE}
+#This shows how the names were altered to create the final share class informatin (Revision)
+#The revision counts might be inaccurate.
 INC_Changes <- INC_Data %>%
   group_by(EXTRACT) %>%
   summarise(cases = n()) %>%
@@ -90,6 +107,7 @@ INC_Changes <- INC_Data %>%
   mutate(replacements1 = (n() - replacements) - 1,
          newercases = sum(cases))
 
+#This counts the number of share class types in the data
 INC_Summary <- INC_Data %>%
   group_by(Revision) %>%
   summarise(cases = n()) %>%
@@ -100,19 +118,33 @@ INC_Summary <- INC_Data %>%
 datatable(INC_Changes)
 ```
 
+We want to add the new category classification to the overall launch data.
+
 ```{r INC_add, message=FALSE}
+
 INC_MODIFIED <- INCEPTION %>%
   mutate(
     Match = str_detect(Name, PATTERN),
     EXTRACT = str_extract(Name, PATTERN),
     New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
     Revision = str_replace_all(New, CHANGE),
-    `Inception Year` = year(`Inception Date`),
-    `Inception Month` = month(`Inception Date`)
+    `Obsolete Year` = year(`Obsolete Date`),
+    `Obsolete Month` = month(`Obsolete Date`),
+    `Inception Year` = year(`Inception Date...4`),
+    `Inception Month` = month(`Inception Date...4`)
   ) %>%
-  select(Name, Match, EXTRACT, New, Revision, 2:3, `Inception Month`, `Inception Year`, 4:19)
-
-write.csv(INC_MODIFIED, "Launches_Data.csv")
+  select(Name, 
+         Match, 
+         EXTRACT, 
+         New, 
+         Revision, 
+         2:3,
+         `Obsolete Month`,
+         `Obsolete Year`, 
+         4, 
+         `Inception Month`, 
+         `Inception Year`, 
+         5:22)
 
 ```
 
@@ -120,9 +152,11 @@ write.csv(INC_MODIFIED, "Launches_Data.csv")
 datatable(INC_Summary)
 ```
 
+The below pulls in data showing mutual fund share classes that liquidated from 2015 onward. The data comes from Morningstar Direct and was pulled by E.L. on Jan. 22, 2020.
+
 ```{r LIQUIDATION}
 LIQUIDATION <-
-  read_excel(path = "launch-liquidation-data-for-adrian.xlsx", sheet = 2, na = "")
+  read_excel(path = "updated-data-for-adrian.xlsx", sheet = 1, na = "")
 
 LIQ_Data <- LIQUIDATION %>%
   select(Name) %>%
@@ -133,6 +167,8 @@ LIQ_Data <- LIQUIDATION %>%
     Revision = str_replace_all(New, CHANGE)
     )
 ```
+
+These tables summarise information about the share classes were identified and how many exist in the data. (Like above)
 
 ```{r LIQ_summary, message=FALSE}
 LIQ_Changes <- LIQ_Data %>%
@@ -152,6 +188,8 @@ LIQ_Summary <- LIQ_Data %>%
   arrange(-cases)
 ```
 
+We want to add the new category classification to the overall liquidation data.
+
 ```{r LIQ_add, message=FALSE}
 LIQ_MODIFIED <- LIQUIDATION %>%
   mutate(
@@ -160,13 +198,27 @@ LIQ_MODIFIED <- LIQUIDATION %>%
     New = str_trim(str_replace_all(EXTRACT,  CUT, "")),
     Revision = str_replace_all(New, CHANGE),
     `Obsolete Year` = year(`Obsolete Date`),
-    `Obsolete Month` = month(`Obsolete Date`)
+    `Obsolete Month` = month(`Obsolete Date`),
+    `Inception Year` = year(`Inception Date`),
+    `Inception Month` = month(`Inception Date`)
   ) %>%
-  select(Name, Match, EXTRACT, New, Revision, 2:3, `Obsolete Month`, `Obsolete Year`, 4:25)
+  select(Name,
+         Match,
+         EXTRACT,
+         New,
+         Revision,
+         2:3,
+         `Obsolete Month`,
+         `Obsolete Year`,
+         4:7,
+         `Inception Month`,
+         `Inception Year`,
+         8:21)
 
-write.csv(LIQ_MODIFIED, "Liquidations_Data.csv")
 
 ```
+
+The data seems to be skewed by share classes that were launched and liquidated during the same year. The below identifies which funds launched and liquidated during the same year so we can tease that out of the data.
 
 ```{r explore, message=FALSE}
 Merged_in_2019 <- inner_join(INC_MODIFIED,LIQ_MODIFIED) %>% 
@@ -184,6 +236,6 @@ Disolved <- inner_join(INC_MODIFIED,LIQ_MODIFIED) %>%
 Launches_Caveat <- left_join(INC_MODIFIED, Disolved)
 Liquidations_Caveat <- left_join(LIQ_MODIFIED, Disolved)
 
-
+write.csv(Liquidations_Caveat, "Liquidations_Data.csv", row.names = FALSE)
+write.csv(Launches_Caveat, "Launches_Data.csv", row.names = FALSE)
 ```
-

@@ -1,0 +1,135 @@
+---
+title: "Share_Class_Charts"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'charts.html'))})
+author: "Adrian D. Garcia"
+date: "January 2020"
+output: html_document
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(lubridate)
+library(DT)
+```
+
+```{r load, message=FALSE}
+LAUNCHES <- read_csv("Launches_Data.csv") %>% 
+  select(Name,
+         EXTRACT,
+         Revision,
+         `Share Class Type`,
+         `US Category Group`,
+         `Index Fund`,
+         Ticker,
+         `Firm Name`,
+         `Inception Date`,
+         `Inception Month`,
+         `Inception Year`,
+         `Same_Year`,
+         `Obsolete Date`,
+         `Obsolete Month`,
+         `Obsolete Year`,
+         `Obsolete Type`
+         )
+
+LIQUIDATIONS <- read_csv("Liquidations_Data.csv") %>% 
+  select(Name,
+         EXTRACT,
+         Revision,
+         `Share Class Type`,
+         `US Category Group`,
+         `Index Fund`,
+         Ticker,
+         `Firm Name`,
+         `Inception Date`,
+         `Inception Month`,
+         `Inception Year`,
+         `Same_Year`,
+         `Obsolete Date`,
+         `Obsolete Month`,
+         `Obsolete Year`,
+         `Obsolete Type`
+         )
+```
+
+```{r overview}
+
+Launches_Overview <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`) %>% 
+  summarise(Launches = n()) %>% 
+  filter(`Inception Year` != 2020)
+
+Liquidations_Overview <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`) %>% 
+  summarise(Liquidations = n()) %>% 
+  filter(`Obsolete Year` != 2020)
+
+library(rJava)
+library(xlsx)
+
+
+write.xlsx(data.frame(Launches_Overview), "Charts.xlsx", sheetName="Launches_Overview", 
+           col.names=TRUE, row.names=FALSE, append=FALSE)
+write.xlsx(data.frame(Liquidations_Overview), "Charts.xlsx", sheetName="Liquidations_Overview",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
+
+```{r classes}
+Launches_Classes <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`, Revision) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+Liquidations_Classes <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, Revision) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+write.xlsx(data.frame(Launches_Classes), "Charts.xlsx", sheetName="Launches_Classes", 
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+write.xlsx(data.frame(Liquidations_Classes), "Charts.xlsx", sheetName="Liquidations_Classes",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
+
+```{r firms}
+Launches_Firms <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`, `Firm Name`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+Liquidations_Firms <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, `Firm Name`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+write.xlsx(data.frame(Launches_Firms), "Charts.xlsx", sheetName="Launches_Firms", 
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+write.xlsx(data.frame(Liquidations_Firms), "Charts.xlsx", sheetName="Liquidations_Firms",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
