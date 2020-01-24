@@ -133,3 +133,51 @@ write.xlsx(data.frame(Liquidations_Firms), "Charts.xlsx", sheetName="Liquidation
            col.names=TRUE, row.names=FALSE, append=TRUE)
 
 ```
+
+```{r type}
+Launches_Types <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`, `US Category Group`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+Liquidations_Types <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, `US Category Group`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL) %>% 
+  arrange(-`2019`) %>% 
+  head(n=15)
+
+write.xlsx(data.frame(Launches_Types), "Charts.xlsx", sheetName="Launches_Types", 
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+write.xlsx(data.frame(Liquidations_Types), "Charts.xlsx", sheetName="Liquidations_Types",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
+
+```{r uniquefirms}
+Launches_UFirms <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`) %>% 
+  summarise(TOTAL = length(unique(`Firm Name`))) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL)
+
+Liquidations_UFirms <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`) %>%
+  summarise(TOTAL = length(unique(`Firm Name`))) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL)
+
+write.xlsx(data.frame(Launches_UFirms), "Charts.xlsx", sheetName="Launches_Firm_Count", 
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+write.xlsx(data.frame(Liquidations_UFirms), "Charts.xlsx", sheetName="Liquidations_Firm_Count",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
