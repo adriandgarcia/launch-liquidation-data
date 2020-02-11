@@ -181,3 +181,110 @@ write.xlsx(data.frame(Liquidations_UFirms), "Charts.xlsx", sheetName="Liquidatio
            col.names=TRUE, row.names=FALSE, append=TRUE)
 
 ```
+
+```{r obsolete}
+
+Liquidations_Category <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, `Obsolete Type`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL)
+
+
+write.xlsx(data.frame(Liquidations_Category), "Charts.xlsx", sheetName="Liquidations_Category",
+           col.names=TRUE, row.names=FALSE, append=TRUE)
+
+```
+
+```{r net_change}
+a <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`, Revision) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL) %>% 
+  arrange(-`2019`) %>%  
+  select(1,6) %>% 
+  mutate(
+    `2019` = case_when(
+      is.na(`2019`) ~ 0,
+      TRUE ~ as.numeric(`2019`)
+      )
+    )
+
+b <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, Revision) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL) %>%  
+  select(1,6) %>%
+  mutate(
+    `2019` = case_when(
+      is.na(`2019`) ~ 0,
+      TRUE ~ as.numeric(`2019`)
+      )
+  )
+
+
+Net_Change<- full_join(a,b, by = "Revision") %>%  
+  mutate(`2019.x` = case_when(
+      is.na(`2019.x`) ~ 0,
+      TRUE ~ as.numeric(`2019.x`)),
+      `2019.y` = case_when(
+      is.na(`2019.y`) ~ 0,
+      TRUE ~ as.numeric(`2019.y`)),
+      NET_LOSS = (`2019.x` - `2019.y`))
+
+write_csv(Net_Change, "net_change.csv")
+rm(a)
+rm(b)
+
+```
+
+```{r creators}
+a <- LAUNCHES %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Inception Year`, `Firm Name`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Inception Year` != 2020) %>% 
+  spread(`Inception Year`, TOTAL) %>%  
+  select(1,6) %>%
+  mutate(
+    `2019` = case_when(
+      is.na(`2019`) ~ 0,
+      TRUE ~ as.numeric(`2019`)
+      )
+    )
+
+b <- LIQUIDATIONS %>% 
+  filter(is.na(Same_Year) | Same_Year == 0) %>% 
+  group_by(`Obsolete Year`, `Firm Name`) %>% 
+  summarise(TOTAL = n()) %>% 
+  filter(`Obsolete Year` != 2020) %>% 
+  spread(`Obsolete Year`, TOTAL)  %>%  
+  select(1,6) %>%
+  mutate(
+    `2019` = case_when(
+      is.na(`2019`) ~ 0,
+      TRUE ~ as.numeric(`2019`)
+      )
+    )
+
+Creators <- full_join(a,b, by = "Firm Name") %>%  
+  mutate(`2019.x` = case_when(
+      is.na(`2019.x`) ~ 0,
+      TRUE ~ as.numeric(`2019.x`)),
+      `2019.y` = case_when(
+      is.na(`2019.y`) ~ 0,
+      TRUE ~ as.numeric(`2019.y`)),
+      NET_LOSS = (`2019.x` - `2019.y`),
+      Creation_Pct = `2019.x`/sum(`2019.x`) *100,
+      Obsolete_Pct = `2019.y`/sum(`2019.y`) *100
+      )
+
+rm(a)
+rm(b)
+```
+
